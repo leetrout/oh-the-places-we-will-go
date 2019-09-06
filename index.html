@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Numbers</title>
+    <style>
+      body {
+        color: #333;
+        font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS",
+          sans-serif;
+        font-size: 1.2rem;
+      }
+      div {
+        margin: 0.3rem;
+        padding: 0.3rem;
+      }
+      div.error #error {
+        display: block !important;
+      }
+      #error {
+        display: none;
+        border: thin solid red;
+        background-color: lightpink;
+        font-weight: bold;
+        color: darkred;
+        padding: 0.5rem;
+        border-radius: 0.2rem;
+      }
+      #container {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+      .content {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        border-color: #333;
+        background-color: rgb(199, 215, 230);
+        border-radius: 0.3rem;
+        box-shadow: 1px 3px 4px #aaa;
+      }
+      @media only screen and (min-width: 700px) {
+        .content {
+          width: 400px;
+        }
+      }
+    </style>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        let authToken;
+        let errorMsg;
+        const result = document.getElementById("result");
+        const inputForm = document.getElementById("input");
+        const containerDiv = document.getElementById("container");
+        const errorDiv = document.getElementById("error");
+        const a = inputForm.querySelector("input[name=a]");
+        const b = inputForm.querySelector("input[name=b]");
+
+        function resetState() {
+          authToken = null;
+          result.textContent = "";
+          containerDiv.classList.remove("error");
+          errorDiv.textContent = "";
+        }
+
+        function showError(msg) {
+          containerDiv.classList.add("error");
+          errorDiv.textContent = msg;
+        }
+
+        function updateState(resp, json) {
+          if (resp.status != 200) {
+            errorMsg = json.detail;
+            console.error(errorMsg);
+          } else {
+            errorMsg = null;
+          }
+          if (errorMsg) {
+            showError(errorMsg);
+          } else {
+            console.info(json.result);
+            result.textContent = parseInt(json.result, 10);
+          }
+        }
+
+        function handleResp(resp) {
+          resp.json().then(json => {
+            updateState(resp, json);
+          });
+        }
+
+        function getResult() {
+          if (authToken) {
+            fetch(`/product?a=${a.value}&b=${b.value}`, {
+              headers: {Authorization: authToken},
+            }).then(handleResp);
+          }
+        }
+
+        inputForm.addEventListener("submit", e => {
+          console.log("go submit");
+          resetState();
+          e.preventDefault();
+          fetch("/auth")
+            .then(resp => {
+              console.log("got response", resp.ok);
+              if (!resp.ok) {
+                throw Error(resp.statusText);
+              }
+              resp.json().then(json => {
+                console.log("got json");
+                authToken = json.token;
+                getResult();
+              });
+            })
+            .catch(err => {
+              showError("Failed to fetch authentication token");
+            });
+        });
+      });
+    </script>
+  </head>
+  <body>
+    <div id="container">
+      <div class="content">
+        <div>
+          <p>Enter two integers and hit calculate to get the result.</p>
+        </div>
+        <div id="error"></div>
+        <form id="input" action="/product">
+          <div>
+            <label for="a">
+              A:
+            </label>
+            <input id="a" type="number" name="a" />
+          </div>
+
+          <div>
+            <label for="b">
+              B:
+            </label>
+            <input id="b" type="number" name="b" />
+          </div>
+          <div>
+            <button type="submit">Calculate</button>
+          </div>
+        </form>
+        <div>Result <span id="result"></span></div>
+      </div>
+    </div>
+  </body>
+</html>
